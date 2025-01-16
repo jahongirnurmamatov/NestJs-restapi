@@ -1,5 +1,7 @@
 import { Injectable } from '@nestjs/common';
-import e from 'express';
+import { UpdateUserDto } from './dto/update-user.dto';
+import { CreateUserDto } from './dto/create-user.dto';
+import { NotFoundException } from '@nestjs/common';
 
 @Injectable()
 export class UsersService {
@@ -32,53 +34,49 @@ export class UsersService {
 
   findAll(role?: 'Intern' | 'Engineer' | 'Admin') {
     if (role) {
-      return this.users.filter((user) => user.role === role);
+        const rolesArray = this.users.filter((user) => user.role === role);
+        if(rolesArray.length === 0){
+            throw new NotFoundException(`User role not found`);
+        }
+        return rolesArray;
     }
     return this.users;
   }
 
   findOne(id: number) {
     const user = this.users.find((user) => user.userId === id);
+    if (!user) {
+      throw new NotFoundException(`User not found`);
+    }
     return user;
   }
 
-  create(user: {
-    username: string;
-    email: string;
-    role: 'Intern' | 'Engineer' | 'Admin';
-  }) {
+  create(createUserDto: CreateUserDto) {
     const usersByHighestId = [...this.users].sort(
       (a, b) => b.userId - a.userId,
     );
     const highestId = usersByHighestId[0].userId;
     const newUser = {
       userId: highestId + 1,
-      ...user,
+      ...createUserDto,
     };
     this.users.push(newUser);
     return newUser;
   }
 
-  update(
-    id: string,
-    updatedUser: {
-      username?: string;
-      email?: string;
-      role?: 'Intern' | 'Engineer' | 'Admin';
-    },
-  ) {
+  update(id: number, updateUserDto: UpdateUserDto) {
     this.users = this.users.map((user) => {
-      if (user.userId === parseInt(id)) {
-        return { ...user, ...updatedUser };
+      if (user.userId === id) {
+        return { ...user, ...updateUserDto };
       }
       return user;
     });
-    return this.findOne(parseInt(id));
+    return this.findOne(id);
   }
 
-  deleteUser(id: string) {
-    const removedUser = this.findOne(parseInt(id));
-    this.users = this.users.filter((user) => user.userId !== parseInt(id));
+  deleteUser(id: number) {
+    const removedUser = this.findOne(id);
+    this.users = this.users.filter((user) => user.userId !== id);
     return removedUser;
   }
 }
